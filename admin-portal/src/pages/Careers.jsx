@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -13,9 +14,8 @@ import {
   Trash2,
   ToggleLeft,
   ToggleRight,
-  Clock,
-  Sparkles,
 } from 'lucide-react';
+
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -31,7 +31,9 @@ const jobSchema = z.object({
   title: z.string().min(2, { message: 'Job title is required' }),
   location: z.string().min(2, { message: 'Location is required' }),
   type: z.string().min(1, { message: 'Please select employment type' }),
-  description: z.string().min(10, { message: 'Description must be at least 10 characters' }),
+  description: z.string().min(10, {
+    message: 'Description must be at least 10 characters',
+  }),
   status: z.enum(['Open', 'Closed']).default('Open'),
 });
 
@@ -46,7 +48,6 @@ export const Careers = () => {
     searchParams.get('status') || JOB_STATUSES.ALL
   );
 
-  // Modal states
   const [modalOpen, setModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -69,13 +70,16 @@ export const Careers = () => {
     },
   });
 
+  // Fetch Jobs
   const fetchJobs = async () => {
     try {
       setLoading(true);
+
       const data = await jobsService.getJobs({
         search,
         status: statusFilter,
       });
+
       setJobs(data);
     } catch (err) {
       toast.error('Failed to load career listings.');
@@ -86,9 +90,7 @@ export const Careers = () => {
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchJobs();
-    }, 250);
+    const timer = setTimeout(fetchJobs, 250);
     return () => clearTimeout(timer);
   }, [search, statusFilter]);
 
@@ -96,13 +98,17 @@ export const Careers = () => {
   useEffect(() => {
     if (searchParams.get('action') === 'new') {
       openAddModal();
-      searchParams.delete('action');
-      setSearchParams(searchParams, { replace: true });
+
+      const params = new URLSearchParams(searchParams);
+      params.delete('action');
+      setSearchParams(params, { replace: true });
     }
   }, [searchParams]);
 
+  // Open Add Modal
   const openAddModal = () => {
     setEditingJob(null);
+
     reset({
       title: '',
       location: 'Indore, India',
@@ -110,11 +116,14 @@ export const Careers = () => {
       description: '',
       status: 'Open',
     });
+
     setModalOpen(true);
   };
 
+  // Open Edit Modal
   const openEditModal = (job) => {
     setEditingJob(job);
+
     reset({
       title: job.title,
       location: job.location,
@@ -122,21 +131,33 @@ export const Careers = () => {
       description: job.description,
       status: job.status,
     });
+
     setModalOpen(true);
   };
 
+  // Add / Update Job
   const handleFormSubmit = async (data) => {
     setActionLoading(true);
+
     try {
       if (editingJob) {
         const updated = await jobsService.updateJob(editingJob.id, data);
-        setJobs((prev) => prev.map((j) => (j.id === editingJob.id ? updated : j)));
+
+        setJobs((prev) =>
+          prev.map((j) => (j.id === editingJob.id ? updated : j))
+        );
+
         toast.success(`Job opening "${updated.title}" updated.`);
       } else {
         const created = await jobsService.createJob(data);
+
         setJobs((prev) => [created, ...prev]);
-        toast.success(`Job opening "${created.title}" posted successfully.`);
+
+        toast.success(
+          `Job opening "${created.title}" posted successfully.`
+        );
       }
+
       setModalOpen(false);
     } catch (err) {
       toast.error(err?.message || 'Failed to save job opening.');
@@ -145,10 +166,15 @@ export const Careers = () => {
     }
   };
 
+  // Toggle Job Status
   const handleToggleStatus = async (job) => {
     try {
       const updated = await jobsService.toggleJobStatus(job.id);
-      setJobs((prev) => prev.map((j) => (j.id === job.id ? updated : j)));
+
+      setJobs((prev) =>
+        prev.map((j) => (j.id === job.id ? updated : j))
+      );
+
       toast.success(
         `Job "${job.title}" is now marked as ${updated.status}.`
       );
@@ -158,6 +184,7 @@ export const Careers = () => {
     }
   };
 
+  // Delete Job
   const confirmDelete = (job) => {
     setJobToDelete(job);
     setDeleteConfirmOpen(true);
@@ -165,11 +192,18 @@ export const Careers = () => {
 
   const handleDelete = async () => {
     if (!jobToDelete) return;
+
     setActionLoading(true);
+
     try {
       await jobsService.deleteJob(jobToDelete.id);
-      setJobs((prev) => prev.filter((j) => j.id !== jobToDelete.id));
+
+      setJobs((prev) =>
+        prev.filter((j) => j.id !== jobToDelete.id)
+      );
+
       toast.success(`Job opening "${jobToDelete.title}" deleted.`);
+
       setDeleteConfirmOpen(false);
       setJobToDelete(null);
     } catch (err) {
@@ -180,17 +214,18 @@ export const Careers = () => {
     }
   };
 
-  // Define Table Columns
+  // Table Columns
   const columns = [
     {
       header: 'Position Title',
       key: 'title',
       render: (row) => (
         <div>
-          <span className="font-semibold text-white group-hover:text-brand-cyan transition-colors">
+          <span className="font-semibold text-slate-900">
             {row.title}
           </span>
-          <p className="text-xs text-brand-muted line-clamp-1 mt-0.5">
+
+          <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">
             {row.description}
           </p>
         </div>
@@ -200,9 +235,9 @@ export const Careers = () => {
       header: 'Location',
       key: 'location',
       render: (row) => (
-        <span className="inline-flex items-center gap-1.5 text-xs text-brand-text">
-          <MapPin className="w-3.5 h-3.5 text-brand-cyan shrink-0" />
-          <span>{row.location}</span>
+        <span className="inline-flex items-center gap-1.5 text-xs text-slate-600">
+          <MapPin className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+          {row.location}
         </span>
       ),
     },
@@ -210,7 +245,7 @@ export const Careers = () => {
       header: 'Type',
       key: 'type',
       render: (row) => (
-        <span className="px-2.5 py-1 rounded-full text-xs bg-navy-850 border border-border-blue text-brand-text">
+        <span className="px-2.5 py-1 rounded-full text-xs bg-blue-50 border border-blue-100 text-blue-700">
           {row.type}
         </span>
       ),
@@ -227,43 +262,43 @@ export const Careers = () => {
       className: 'text-right',
       render: (row) => (
         <div className="flex items-center justify-end gap-2">
-          {/* Quick status toggle button */}
+
           <button
             type="button"
             onClick={() => handleToggleStatus(row)}
-            className="p-1.5 rounded-lg bg-navy-900 border border-border-blue text-brand-text hover:text-brand-cyan transition-colors"
+            className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-blue-50 hover:text-blue-600 transition-colors"
             title={row.status === 'Open' ? 'Close job' : 'Re-open job'}
             aria-label={`Toggle status for ${row.title}`}
           >
             {row.status === 'Open' ? (
-              <ToggleRight className="w-4 h-4 text-emerald-400" />
+              <ToggleRight className="w-4 h-4 text-emerald-600" />
             ) : (
-              <ToggleLeft className="w-4 h-4 text-slate-500" />
+              <ToggleLeft className="w-4 h-4 text-slate-400" />
             )}
           </button>
 
           <button
             type="button"
             onClick={() => openEditModal(row)}
-            className="p-1.5 rounded-lg bg-navy-900 border border-border-blue text-brand-text hover:text-white hover:border-brand-cyan transition-colors"
+            className="p-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors"
             title="Edit Opening"
             aria-label={`Edit ${row.title}`}
           >
             <Edit2 className="w-3.5 h-3.5" />
           </button>
 
-          {/* Delete button: strictly hidden for Editors! */}
           {isAdmin && (
             <button
               type="button"
               onClick={() => confirmDelete(row)}
-              className="p-1.5 rounded-lg bg-red-950/40 border border-red-900/60 text-red-300 hover:text-white hover:border-red-500 hover:bg-red-900/60 transition-colors"
+              className="p-1.5 rounded-lg bg-red-50 border border-red-100 text-red-600 hover:bg-red-100 hover:border-red-300 transition-colors"
               title="Delete Opening"
               aria-label={`Delete ${row.title}`}
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
+
         </div>
       ),
     },
@@ -271,14 +306,16 @@ export const Careers = () => {
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn">
-      {/* Header Bar */}
+
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-            <Briefcase className="w-6 h-6 text-brand-cyan" />
-            <span>Career Openings</span>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Briefcase className="w-6 h-6 text-blue-600" />
+            Career Openings
           </h1>
-          <p className="text-xs sm:text-sm text-brand-muted mt-1">
+
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Publish, edit, and manage engineering and design vacancies in Indore
           </p>
         </div>
@@ -286,38 +323,41 @@ export const Careers = () => {
         <button
           type="button"
           onClick={openAddModal}
-          className="btn-primary text-xs sm:text-sm py-2.5 px-5 flex items-center gap-2"
+          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-medium flex items-center gap-2 shadow-sm transition-colors"
         >
-          <Plus className="w-4 h-4 text-brand-cyan" />
-          <span>Post a Job</span>
+          <Plus className="w-4 h-4" />
+          Post a Job
         </button>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="card-gradient border border-border-blue/60 p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+      {/* Search and Filters */}
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+
         <div className="relative w-full md:w-80">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-muted" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search job title or keyword..."
-            className="input-field pl-10 text-xs sm:text-sm"
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
           />
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
-          <div className="flex items-center gap-1.5 bg-navy-900 p-1 rounded-xl border border-border-blue text-xs">
-            <Filter className="w-3.5 h-3.5 text-brand-cyan ml-2 mr-1" />
+          <div className="flex items-center gap-1.5 bg-slate-50 p-1 rounded-xl border border-slate-200 text-xs">
+            <Filter className="w-3.5 h-3.5 text-blue-600 ml-2 mr-1" />
+
             {['All', 'Open', 'Closed'].map((st) => (
               <button
                 key={st}
                 type="button"
                 onClick={() => setStatusFilter(st)}
-                className={`px-3 py-1 rounded-lg font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-lg font-medium transition-all ${
                   statusFilter === st
-                    ? 'bg-brand-blue text-white shadow-glow-sm'
-                    : 'text-brand-muted hover:text-white'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-blue-600 hover:bg-blue-50'
                 }`}
               >
                 {st}
@@ -327,7 +367,7 @@ export const Careers = () => {
         </div>
       </div>
 
-      {/* Jobs DataTable */}
+      {/* Jobs Table */}
       <DataTable
         columns={columns}
         data={jobs}
@@ -338,7 +378,11 @@ export const Careers = () => {
             ? 'No postings match the current filter. Try resetting search filters.'
             : 'No career vacancies currently listed. Click "Post a Job" to add one.'
         }
-        emptyActionLabel={search || statusFilter !== 'All' ? 'Reset Filters' : 'Post First Job'}
+        emptyActionLabel={
+          search || statusFilter !== 'All'
+            ? 'Reset Filters'
+            : 'Post First Job'
+        }
         onEmptyAction={
           search || statusFilter !== 'All'
             ? () => {
@@ -356,7 +400,10 @@ export const Careers = () => {
         title={editingJob ? 'Edit Career Opening' : 'Post New Job Opening'}
         subtitle="Specify candidate requirements and employment terms"
       >
-        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+        <form
+          onSubmit={handleSubmit(handleFormSubmit)}
+          className="space-y-4"
+        >
           <FormField
             id="job-title"
             label="Job Title"
@@ -367,7 +414,9 @@ export const Careers = () => {
               id="job-title"
               type="text"
               placeholder="e.g. Senior React Developer"
-              className={`input-field ${errors.title ? 'border-red-500' : ''}`}
+              className={`w-full px-3 py-2.5 rounded-lg border bg-white text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.title ? 'border-red-500' : 'border-slate-200'
+              }`}
               {...register('title')}
             />
           </FormField>
@@ -383,7 +432,9 @@ export const Careers = () => {
                 id="job-location"
                 type="text"
                 placeholder="Indore, India"
-                className={`input-field ${errors.location ? 'border-red-500' : ''}`}
+                className={`w-full px-3 py-2.5 rounded-lg border bg-white text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.location ? 'border-red-500' : 'border-slate-200'
+                }`}
                 {...register('location')}
               />
             </FormField>
@@ -396,11 +447,11 @@ export const Careers = () => {
             >
               <select
                 id="job-type"
-                className="input-field bg-navy-900 text-white cursor-pointer"
+                className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
                 {...register('type')}
               >
                 {JOB_TYPES.map((t) => (
-                  <option key={t} value={t} className="bg-navy-900 text-white">
+                  <option key={t} value={t}>
                     {t}
                   </option>
                 ))}
@@ -415,11 +466,11 @@ export const Careers = () => {
           >
             <select
               id="job-status"
-              className="input-field bg-navy-900 text-white cursor-pointer"
+              className="w-full px-3 py-2.5 rounded-lg border border-slate-200 bg-white text-sm text-slate-700 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
               {...register('status')}
             >
-              <option value="Open" className="bg-navy-900 text-white">Open (Accepting Applicants)</option>
-              <option value="Closed" className="bg-navy-900 text-white">Closed (Hidden/Archived)</option>
+              <option value="Open">Open (Accepting Applicants)</option>
+              <option value="Closed">Closed (Hidden/Archived)</option>
             </select>
           </FormField>
 
@@ -434,35 +485,38 @@ export const Careers = () => {
               id="job-description"
               rows={4}
               placeholder="We are looking for an experienced engineer to build..."
-              className={`input-field resize-none ${
-                errors.description ? 'border-red-500' : ''
+              className={`w-full px-3 py-2.5 rounded-lg border bg-white text-sm text-slate-700 placeholder:text-slate-400 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.description ? 'border-red-500' : 'border-slate-200'
               }`}
               {...register('description')}
             />
           </FormField>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-border-blue/50">
+          {/* Form Actions */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
             <button
               type="button"
               disabled={actionLoading}
               onClick={() => setModalOpen(false)}
-              className="btn-secondary text-xs sm:text-sm"
+              className="px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-600 text-xs sm:text-sm font-medium hover:bg-slate-50 disabled:opacity-50 transition-colors"
             >
               Cancel
             </button>
+
             <button
               type="submit"
               disabled={actionLoading}
-              className="btn-primary text-xs sm:text-sm flex items-center gap-2"
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-medium flex items-center gap-2 disabled:opacity-50 transition-colors"
             >
               {actionLoading && <Loader size="sm" text="" />}
-              <span>{editingJob ? 'Save Opening' : 'Publish Job'}</span>
+
+              {editingJob ? 'Save Opening' : 'Publish Job'}
             </button>
           </div>
         </form>
       </Modal>
 
-      {/* Delete Confirm Dialog */}
+      {/* Delete Confirmation */}
       <ConfirmDialog
         isOpen={deleteConfirmOpen}
         onClose={() => setDeleteConfirmOpen(false)}
@@ -473,9 +527,9 @@ export const Careers = () => {
         confirmText="Yes, Delete Job"
         isDanger={true}
       />
+
     </div>
   );
 };
 
 export default Careers;
-

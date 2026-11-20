@@ -160,20 +160,20 @@ export const Login = () => {
           {/* Metric Badges Matching Screen 1 & 2 */}
           <div className="grid grid-cols-4 gap-2 pt-2 border-t border-[#1a3888]/60 text-center">
             <div>
-              <p className="text-base font-bold text-white">8+</p>
-              <p className="text-[10px] text-brand-muted">Years Exp</p>
+              {/* <p className="text-base font-bold text-white">10+</p>
+              <p className="text-[10px] text-brand-muted">Years Exp</p> */}
             </div>
             <div>
-              <p className="text-base font-bold text-brand-cyan">100+</p>
-              <p className="text-[10px] text-brand-muted">Projects</p>
+              {/* <p className="text-base font-bold text-brand-cyan">100+</p>
+              <p className="text-[10px] text-brand-muted">Projects</p> */}
             </div>
             <div>
-              <p className="text-base font-bold text-white">50+</p>
-              <p className="text-[10px] text-brand-muted">Clients</p>
+              {/* <p className="text-base font-bold text-white">50+</p>
+              <p className="text-[10px] text-brand-muted">Clients</p> */}
             </div>
             <div>
-              <p className="text-base font-bold text-brand-cyan">98%</p>
-              <p className="text-[10px] text-brand-muted">Satisfaction</p>
+              {/* <p className="text-base font-bold text-brand-cyan">98%</p>
+              <p className="text-[10px] text-brand-muted">Satisfaction</p> */}
             </div>
           </div>
         </div>

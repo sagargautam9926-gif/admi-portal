@@ -182,3 +182,49 @@
     border-right-color: var(--border);
   }
 }
+
+/* =================================
+   CODE EAGLE - BLUE WHITE THEME
+================================= */
+
+:root {
+  --primary-blue: #2563EB;
+  --secondary-blue: #0EA5E9;
+  --main-bg: #F1F6FD;
+  --card-bg: #FFFFFF;
+  --text-color: #0F172A;
+  --muted-text: #64748B;
+  --border-color: #E2E8F0;
+}
+
+/* Main page background */
+body {
+  background: var(--main-bg);
+  color: var(--text-color);
+}
+
+/* Dashboard background */
+#root {
+  min-height: 100vh;
+}
+
+/* White cards */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+}
+
+/* Blue buttons */
+button {
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+/* Headings */
+h1, h2, h3 {
+  color: var(--text-color);
+}

@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -9,25 +10,42 @@ export const ProtectedRoute = ({ children, requiredRole }) => {
   const location = useLocation();
 
   useEffect(() => {
-    if (!loading && isAuthenticated && requiredRole && user?.role !== requiredRole) {
-      toast.error(`Access restricted: You do not have permissions to access this page.`, {
-        id: 'role-restricted-toast',
-      });
+    if (
+      !loading &&
+      isAuthenticated &&
+      requiredRole &&
+      user?.role !== requiredRole
+    ) {
+      toast.error(
+        'Access restricted: You do not have permissions to access this page.',
+        {
+          id: 'role-restricted-toast',
+        }
+      );
     }
   }, [loading, isAuthenticated, requiredRole, user]);
 
+  // Authentication Loading
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-navy-950">
+      <div className="min-h-screen flex items-center justify-center bg-[#F1F6FD]">
         <Loader size="lg" text="Authenticating..." />
       </div>
     );
   }
 
+  // Redirect unauthenticated users
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: location }}
+        replace
+      />
+    );
   }
 
+  // Check user role
   if (requiredRole && user?.role !== requiredRole) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -36,4 +54,3 @@ export const ProtectedRoute = ({ children, requiredRole }) => {
 };
 
 export default ProtectedRoute;
-

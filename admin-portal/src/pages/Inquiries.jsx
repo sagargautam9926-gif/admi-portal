@@ -1,25 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Mail,
   Search,
-  Filter,
   Download,
   Eye,
   Trash2,
   Calendar,
-  Phone,
-  User,
   ArrowUpDown,
   CheckCircle2,
-  Clock,
-  Sparkles,
-  ChevronDown,
 } from 'lucide-react';
+
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
-import StatusBadge from '../components/StatusBadge';
 import { inquiriesService } from '../api/inquiriesService';
 import { useAuth } from '../context/AuthContext';
 import { INQUIRY_STATUSES } from '../utils/constants';
@@ -27,7 +21,7 @@ import toast from 'react-hot-toast';
 
 export const Inquiries = () => {
   const { isAdmin } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
 
   const [inquiriesData, setInquiriesData] = useState({
     inquiries: [],
@@ -43,18 +37,19 @@ export const Inquiries = () => {
   const [statusFilter, setStatusFilter] = useState(
     searchParams.get('status') || INQUIRY_STATUSES.ALL
   );
-  const [sortOrder, setSortOrder] = useState('desc'); // 'desc' | 'asc'
+  const [sortOrder, setSortOrder] = useState('desc');
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Modals
   const [selectedInquiry, setSelectedInquiry] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [inquiryToDelete, setInquiryToDelete] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const fetchInquiries = async () => {
+  // Fetch inquiries
+  const fetchInquiries = useCallback(async () => {
     try {
       setLoading(true);
+
       const data = await inquiriesService.getInquiries({
         search,
         status: statusFilter,
@@ -62,6 +57,7 @@ export const Inquiries = () => {
         limit: 5,
         sortOrder,
       });
+
       setInquiriesData(data);
     } catch (err) {
       toast.error('Failed to load inquiries.');
@@ -69,49 +65,74 @@ export const Inquiries = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, statusFilter, currentPage, sortOrder]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchInquiries();
-    }, 200);
+    const timer = setTimeout(fetchInquiries, 200);
     return () => clearTimeout(timer);
-  }, [search, statusFilter, sortOrder, currentPage]);
+  }, [fetchInquiries]);
 
+  // Update inquiry status
   const handleStatusChange = async (inquiryId, newStatus) => {
+    const existingInquiry = inquiriesData.inquiries.find(
+      (item) => item.id === inquiryId
+    );
+
+    if (existingInquiry?.status === 'Resolved') {
+      toast.error('Resolved inquiries cannot be moved back to New or In Progress.');
+      return;
+    }
+
     try {
-      const updated = await inquiriesService.updateInquiryStatus(inquiryId, newStatus);
+      const updated = await inquiriesService.updateInquiryStatus(
+        inquiryId,
+        newStatus
+      );
+
       setInquiriesData((prev) => ({
         ...prev,
-        inquiries: prev.inquiries.map((i) => (i.id === inquiryId ? updated : i)),
+        inquiries: prev.inquiries.map((item) =>
+          item.id === inquiryId ? updated : item
+        ),
       }));
-      if (selectedInquiry && selectedInquiry.id === inquiryId) {
+
+      if (selectedInquiry?.id === inquiryId) {
         setSelectedInquiry(updated);
       }
+
       toast.success(`Inquiry status updated to "${newStatus}".`);
+      await fetchInquiries();
     } catch (err) {
       toast.error('Failed to update status.');
       console.error(err);
     }
   };
 
+  // Open delete confirmation
   const confirmDelete = (inquiry) => {
     setInquiryToDelete(inquiry);
     setDeleteConfirmOpen(true);
   };
 
+  // Delete inquiry
   const handleDelete = async () => {
     if (!inquiryToDelete) return;
+
     setActionLoading(true);
+
     try {
       await inquiriesService.deleteInquiry(inquiryToDelete.id);
+
       toast.success(`Inquiry from ${inquiryToDelete.name} deleted.`);
+
       setDeleteConfirmOpen(false);
       setInquiryToDelete(null);
+
       if (selectedInquiry?.id === inquiryToDelete.id) {
         setSelectedInquiry(null);
       }
-      fetchInquiries();
+
+      await fetchInquiries();
     } catch (err) {
       toast.error('Failed to delete inquiry.');
       console.error(err);
@@ -120,34 +141,58 @@ export const Inquiries = () => {
     }
   };
 
+  // Export inquiries to CSV
   const handleExportCSV = () => {
-    const listToExport = inquiriesData.allFiltered || inquiriesData.inquiries || [];
+    const listToExport =
+      inquiriesData.allFiltered || inquiriesData.inquiries || [];
+
     if (listToExport.length === 0) {
       toast.error('No inquiry records available to export.');
       return;
     }
 
-    const headers = ['ID', 'Name', 'Email', 'Phone', 'Service', 'Status', 'Date', 'Message'];
+    const escapeCSV = (value) =>
+      `"${String(value ?? '').replace(/"/g, '""').replace(/\n/g, ' ')}"`;
+
+    const headers = [
+      'ID',
+      'Name',
+      'Email',
+      'Phone',
+      'Service',
+      'Status',
+      'Date',
+      'Message',
+    ];
+
     const rows = listToExport.map((item) => [
-      `"${item.id}"`,
-      `"${item.name.replace(/"/g, '""')}"`,
-      `"${item.email.replace(/"/g, '""')}"`,
-      `"${item.phone.replace(/"/g, '""')}"`,
-      `"${item.service.replace(/"/g, '""')}"`,
-      `"${item.status}"`,
-      `"${new Date(item.date).toLocaleDateString()}"`,
-      `"${(item.message || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`,
+      escapeCSV(item.id),
+      escapeCSV(item.name),
+      escapeCSV(item.email),
+      escapeCSV(item.phone),
+      escapeCSV(item.service),
+      escapeCSV(item.status),
+      escapeCSV(new Date(item.date).toLocaleDateString()),
+      escapeCSV(item.message),
     ]);
 
-    const csvContent = [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) => row.join(',')),
+    ].join('\n');
+
+    const blob = new Blob([csvContent], {
+      type: 'text/csv;charset=utf-8;',
+    });
+
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute(
-      'download',
-      `code_eagle_inquiries_${new Date().toISOString().slice(0, 10)}.csv`
-    );
+
+    link.href = url;
+    link.download = `code_eagle_inquiries_${new Date()
+      .toISOString()
+      .slice(0, 10)}.csv`;
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -160,17 +205,17 @@ export const Inquiries = () => {
     setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'));
   };
 
-  // Columns definition
+  // Table columns
   const columns = [
     {
       header: 'Client / Contact',
       key: 'name',
       render: (row) => (
         <div>
-          <div className="font-semibold text-white group-hover:text-brand-cyan transition-colors">
+          <p className="font-semibold text-slate-800">
             {row.name}
-          </div>
-          <div className="text-xs text-brand-muted mt-0.5 flex items-center gap-2">
+          </p>
+          <div className="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-2">
             <span>{row.email}</span>
             <span>•</span>
             <span>{row.phone}</span>
@@ -182,7 +227,7 @@ export const Inquiries = () => {
       header: 'Service Requested',
       key: 'service',
       render: (row) => (
-        <span className="text-xs font-medium text-white px-2.5 py-1 rounded-full bg-navy-850 border border-border-blue inline-block">
+        <span className="text-xs font-medium text-blue-700 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 inline-block">
           {row.service}
         </span>
       ),
@@ -191,7 +236,7 @@ export const Inquiries = () => {
       header: 'Message Preview',
       key: 'message',
       render: (row) => (
-        <p className="text-xs text-brand-text/80 line-clamp-1 max-w-xs">
+        <p className="text-xs text-slate-600 line-clamp-1 max-w-xs">
           {row.message}
         </p>
       ),
@@ -201,29 +246,35 @@ export const Inquiries = () => {
       key: 'date',
       sortable: true,
       render: (row) => (
-        <span className="text-xs text-brand-muted whitespace-nowrap flex items-center gap-1.5">
-          <Calendar className="w-3.5 h-3.5 text-brand-cyan" />
-          <span>{new Date(row.date).toLocaleDateString()}</span>
+        <span className="text-xs text-slate-500 whitespace-nowrap flex items-center gap-1.5">
+          <Calendar className="w-3.5 h-3.5 text-blue-500" />
+          {new Date(row.date).toLocaleDateString()}
         </span>
       ),
     },
     {
       header: 'Status',
       key: 'status',
-      render: (row) => (
-        <div className="flex items-center gap-2">
+      render: (row) =>
+        row.status === 'Resolved' ? (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 select-none">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            Resolved
+          </span>
+        ) : (
           <select
             value={row.status}
-            onChange={(e) => handleStatusChange(row.id, e.target.value)}
-            className="text-xs bg-navy-900 border border-border-blue rounded-lg px-2 py-1 text-white focus:outline-none focus:border-brand-cyan cursor-pointer"
+            onChange={(e) =>
+              handleStatusChange(row.id, e.target.value)
+            }
+            className="text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 cursor-pointer"
             aria-label={`Change status for inquiry from ${row.name}`}
           >
-            <option value="New" className="bg-navy-900 text-cyan-300">New</option>
-            <option value="In Progress" className="bg-navy-900 text-amber-300">In Progress</option>
-            <option value="Resolved" className="bg-navy-900 text-emerald-300">Resolved</option>
+            <option value="New">New</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Resolved">Resolved</option>
           </select>
-        </div>
-      ),
+        ),
     },
     {
       header: 'Actions',
@@ -235,23 +286,22 @@ export const Inquiries = () => {
           <button
             type="button"
             onClick={() => setSelectedInquiry(row)}
-            className="p-1.5 rounded-lg bg-navy-900 border border-border-blue text-brand-text hover:text-white hover:border-brand-cyan transition-colors"
+            className="p-2 rounded-lg bg-blue-50 border border-blue-100 text-blue-600 hover:bg-blue-100 transition-colors"
             title="View Full Message"
             aria-label={`View message from ${row.name}`}
           >
-            <Eye className="w-3.5 h-3.5" />
+            <Eye className="w-4 h-4" />
           </button>
 
-          {/* Delete button: strictly hidden for Editors! */}
           {isAdmin && (
             <button
               type="button"
               onClick={() => confirmDelete(row)}
-              className="p-1.5 rounded-lg bg-red-950/40 border border-red-900/60 text-red-300 hover:text-white hover:border-red-500 hover:bg-red-900/60 transition-colors"
+              className="p-2 rounded-lg bg-red-50 border border-red-100 text-red-600 hover:bg-red-100 transition-colors"
               title="Delete Inquiry"
               aria-label={`Delete inquiry from ${row.name}`}
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="w-4 h-4" />
             </button>
           )}
         </div>
@@ -261,32 +311,34 @@ export const Inquiries = () => {
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn">
-      {/* Header Bar */}
+
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-            <Mail className="w-6 h-6 text-brand-cyan" />
-            <span>Client Inquiries</span>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <Mail className="w-6 h-6 text-blue-600" />
+            Client Inquiries
           </h1>
-          <p className="text-xs sm:text-sm text-brand-muted mt-1">
-            Prospect contact requests, RFPs, and service inquiries from the website
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            Manage prospect contact requests, RFPs, and service inquiries.
           </p>
         </div>
 
         <button
           type="button"
           onClick={handleExportCSV}
-          className="btn-primary text-xs sm:text-sm py-2.5 px-5 flex items-center gap-2"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold shadow-sm transition-colors"
         >
-          <Download className="w-4 h-4 text-brand-cyan" />
-          <span>Export CSV</span>
+          <Download className="w-4 h-4" />
+          Export CSV
         </button>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="card-gradient border border-border-blue/60 p-4 flex flex-col lg:flex-row items-center justify-between gap-4">
+      {/* Search and Filters */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col lg:flex-row items-center justify-between gap-4">
+
         <div className="relative w-full lg:w-80">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-muted" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
             value={search}
@@ -295,13 +347,14 @@ export const Inquiries = () => {
               setCurrentPage(1);
             }}
             placeholder="Search by client, email, phone, message..."
-            className="input-field pl-10 text-xs sm:text-sm"
+            className="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all"
           />
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto justify-end">
-          {/* Status Filter Buttons */}
-          <div className="flex items-center gap-1 bg-navy-900 p-1 rounded-xl border border-border-blue text-xs">
+
+          {/* Status Filters */}
+          <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs">
             {['All', 'New', 'In Progress', 'Resolved'].map((st) => (
               <button
                 key={st}
@@ -310,10 +363,10 @@ export const Inquiries = () => {
                   setStatusFilter(st);
                   setCurrentPage(1);
                 }}
-                className={`px-3 py-1 rounded-lg font-medium transition-all ${
+                className={`px-3 py-2 rounded-lg font-medium transition-all ${
                   statusFilter === st
-                    ? 'bg-brand-blue text-white shadow-glow-sm'
-                    : 'text-brand-muted hover:text-white'
+                    ? 'bg-white text-blue-700 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
                 {st}
@@ -321,15 +374,15 @@ export const Inquiries = () => {
             ))}
           </div>
 
-          {/* Sort order toggle button */}
+          {/* Sort Button */}
           <button
             type="button"
             onClick={toggleSort}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-navy-900 border border-border-blue text-xs text-brand-text hover:text-white hover:border-brand-cyan transition-colors"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-600 hover:border-blue-300 hover:text-blue-600 transition-colors"
             title="Toggle sort direction"
           >
-            <ArrowUpDown className="w-3.5 h-3.5 text-brand-cyan" />
-            <span>Date: {sortOrder === 'desc' ? 'Newest' : 'Oldest'}</span>
+            <ArrowUpDown className="w-3.5 h-3.5 text-blue-600" />
+            Date: {sortOrder === 'desc' ? 'Newest' : 'Oldest'}
           </button>
         </div>
       </div>
@@ -349,7 +402,7 @@ export const Inquiries = () => {
           totalPages: inquiriesData.totalPages,
           total: inquiriesData.total,
           limit: inquiriesData.limit,
-          onPageChange: (newPage) => setCurrentPage(newPage),
+          onPageChange: setCurrentPage,
         }}
         emptyTitle="No inquiries found"
         emptyDescription={
@@ -365,96 +418,111 @@ export const Inquiries = () => {
         }}
       />
 
-      {/* View Message Modal */}
+      {/* View Inquiry Modal */}
       <Modal
         isOpen={!!selectedInquiry}
         onClose={() => setSelectedInquiry(null)}
         title="Client Inquiry Message"
         subtitle={`Submitted on ${
-          selectedInquiry ? new Date(selectedInquiry.date).toLocaleString() : ''
+          selectedInquiry
+            ? new Date(selectedInquiry.date).toLocaleString()
+            : ''
         }`}
       >
         {selectedInquiry && (
           <div className="space-y-5 text-xs sm:text-sm">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl bg-navy-900/80 border border-border-blue/60">
+
+            {/* Client Information */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+
               <div>
-                <p className="text-[11px] text-brand-muted uppercase font-semibold">
+                <p className="text-[11px] text-slate-500 uppercase font-semibold">
                   Sender Name
                 </p>
-                <p className="font-semibold text-white mt-0.5">
+                <p className="font-semibold text-slate-800 mt-1">
                   {selectedInquiry.name}
                 </p>
               </div>
 
               <div>
-                <p className="text-[11px] text-brand-muted uppercase font-semibold">
+                <p className="text-[11px] text-slate-500 uppercase font-semibold">
                   Current Status
                 </p>
-                <div className="mt-1 flex items-center gap-2">
+                {selectedInquiry.status === 'Resolved' ? (
+                  <span className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 select-none">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    Resolved
+                  </span>
+                ) : (
                   <select
                     value={selectedInquiry.status}
-                    onChange={(e) => handleStatusChange(selectedInquiry.id, e.target.value)}
-                    className="text-xs bg-navy-950 border border-border-blue rounded-lg px-2 py-1 text-white focus:outline-none focus:border-brand-cyan"
+                    onChange={(e) =>
+                      handleStatusChange(selectedInquiry.id, e.target.value)
+                    }
+                    className="mt-1 text-xs bg-white border border-slate-200 rounded-lg px-2.5 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-100"
                   >
                     <option value="New">New</option>
                     <option value="In Progress">In Progress</option>
                     <option value="Resolved">Resolved</option>
                   </select>
-                </div>
+                )}
               </div>
 
               <div>
-                <p className="text-[11px] text-brand-muted uppercase font-semibold">
+                <p className="text-[11px] text-slate-500 uppercase font-semibold">
                   Email
                 </p>
                 <a
                   href={`mailto:${selectedInquiry.email}`}
-                  className="font-medium text-brand-cyan mt-0.5 block hover:underline"
+                  className="font-medium text-blue-600 mt-1 block hover:underline break-all"
                 >
                   {selectedInquiry.email}
                 </a>
               </div>
 
               <div>
-                <p className="text-[11px] text-brand-muted uppercase font-semibold">
+                <p className="text-[11px] text-slate-500 uppercase font-semibold">
                   Phone Number
                 </p>
                 <a
                   href={`tel:${selectedInquiry.phone}`}
-                  className="font-medium text-white mt-0.5 block hover:underline"
+                  className="font-medium text-slate-700 mt-1 block hover:text-blue-600"
                 >
                   {selectedInquiry.phone}
                 </a>
               </div>
 
               <div className="sm:col-span-2">
-                <p className="text-[11px] text-brand-muted uppercase font-semibold">
+                <p className="text-[11px] text-slate-500 uppercase font-semibold">
                   Service Category
                 </p>
-                <p className="font-semibold text-brand-cyan mt-0.5">
+                <p className="font-semibold text-blue-700 mt-1">
                   {selectedInquiry.service}
                 </p>
               </div>
             </div>
 
+            {/* Full Message */}
             <div>
-              <p className="text-xs font-semibold text-brand-muted uppercase mb-1.5">
+              <p className="text-xs font-semibold text-slate-500 uppercase mb-2">
                 Full Inquiry Text
               </p>
-              <div className="p-4 rounded-xl bg-[#061445] border border-border-blue/80 text-brand-text leading-relaxed whitespace-pre-wrap">
+              <div className="p-4 rounded-xl bg-white border border-slate-200 text-slate-700 leading-relaxed whitespace-pre-wrap break-words">
                 {selectedInquiry.message}
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-border-blue/50">
+            {/* Modal Actions */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-200">
+
               {isAdmin && (
                 <button
                   type="button"
                   onClick={() => confirmDelete(selectedInquiry)}
-                  className="btn-danger text-xs px-3 py-1.5 flex items-center gap-1.5"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 text-xs font-medium transition-colors"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span>Delete</span>
+                  Delete
                 </button>
               )}
 
@@ -462,16 +530,17 @@ export const Inquiries = () => {
                 <button
                   type="button"
                   onClick={() => setSelectedInquiry(null)}
-                  className="btn-secondary text-xs sm:text-sm"
+                  className="px-4 py-2 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs sm:text-sm font-medium transition-colors"
                 >
                   Close
                 </button>
+
                 <a
                   href={`mailto:${selectedInquiry.email}?subject=Regarding your Code Eagle inquiry on ${selectedInquiry.service}`}
-                  className="btn-primary text-xs sm:text-sm flex items-center gap-1.5"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-medium transition-colors"
                 >
-                  <Mail className="w-3.5 h-3.5 text-brand-cyan" />
-                  <span>Reply via Email</span>
+                  <Mail className="w-3.5 h-3.5" />
+                  Reply via Email
                 </a>
               </div>
             </div>
@@ -479,7 +548,7 @@ export const Inquiries = () => {
         )}
       </Modal>
 
-      {/* Delete Confirm Dialog */}
+      {/* Delete Confirmation */}
       <ConfirmDialog
         isOpen={deleteConfirmOpen}
         onClose={() => setDeleteConfirmOpen(false)}
@@ -495,4 +564,3 @@ export const Inquiries = () => {
 };
 
 export default Inquiries;
-

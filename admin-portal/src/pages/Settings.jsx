@@ -11,10 +11,7 @@ import {
   Phone,
   MapPin,
   Award,
-  Users,
-  CheckCircle,
   AlertCircle,
-  Sparkles,
 } from 'lucide-react';
 import FormField from '../components/FormField';
 import Loader from '../components/Loader';
@@ -23,29 +20,22 @@ import toast from 'react-hot-toast';
 
 const settingsSchema = z.object({
   contact: z.object({
-    email: z
-      .string()
+    email: z.string()
       .min(1, { message: 'Contact email is required' })
       .email({ message: 'Please enter a valid email address' }),
-    phone: z
-      .string()
+    phone: z.string()
       .min(8, { message: 'Phone number must be at least 8 digits' }),
-    officeLocation: z
-      .string()
+    officeLocation: z.string()
       .min(5, { message: 'Office location must be at least 5 characters' }),
   }),
   stats: z.object({
-    yearsExperience: z.coerce
-      .number({ invalid_type_error: 'Must be a number' })
+    engineeringHours: z.coerce.number()
       .min(0, { message: 'Must be at least 0' }),
-    projectsCompleted: z.coerce
-      .number({ invalid_type_error: 'Must be a number' })
+    projectsDelivered: z.coerce.number()
       .min(0, { message: 'Must be at least 0' }),
-    activeClients: z.coerce
-      .number({ invalid_type_error: 'Must be a number' })
+    enterprisePartners: z.coerce.number()
       .min(0, { message: 'Must be at least 0' }),
-    clientSatisfaction: z.coerce
-      .number({ invalid_type_error: 'Must be a number' })
+    clientRetention: z.coerce.number()
       .min(0, { message: 'Min 0%' })
       .max(100, { message: 'Max 100%' }),
   }),
@@ -85,6 +75,7 @@ export const Settings = () => {
 
   const onSubmit = async (formData) => {
     setSaving(true);
+
     try {
       const updated = await settingsService.updateSettings(formData);
       setInitialData(updated);
@@ -106,46 +97,55 @@ export const Settings = () => {
 
   if (loading) {
     return (
-      <div className="py-24 flex items-center justify-center">
+      <div className="min-h-[60vh] flex items-center justify-center">
         <Loader size="lg" text="Loading company settings..." />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 sm:space-y-8 animate-fadeIn max-w-4xl">
-      {/* Header Bar */}
+    <div className="max-w-5xl space-y-6 sm:space-y-8 animate-fadeIn">
+
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-            <SettingsIcon className="w-6 h-6 text-brand-cyan" />
-            <span>Site & System Settings</span>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <SettingsIcon className="w-6 h-6 text-blue-600" />
+            Site & System Settings
           </h1>
-          <p className="text-xs sm:text-sm text-brand-muted mt-1">
-            Global business contact info and homepage statistics for Code Eagle
+          <p className="text-sm text-slate-500 mt-1">
+            Manage company contact information and homepage statistics.
           </p>
         </div>
 
-        {/* Unsaved Changes Indicator Pill */}
         {isDirty && (
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-950/60 border border-amber-500/40 text-amber-300 text-xs font-semibold animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.25)]">
-            <AlertCircle className="w-3.5 h-3.5" />
-            <span>Unsaved Changes</span>
+          <div className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold">
+            <AlertCircle className="w-4 h-4" />
+            Unsaved Changes
           </div>
         )}
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Section 1: Contact Information */}
-        <div className="card-gradient border border-border-blue/70 p-5 sm:p-7 space-y-5">
-          <div className="flex items-center gap-2.5 pb-3 border-b border-border-blue/50">
-            <Building className="w-5 h-5 text-brand-cyan" />
-            <h2 className="text-base font-semibold text-white">
-              Official Contact & Office Information
-            </h2>
+
+        {/* Contact Information */}
+        <section className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-7 shadow-sm space-y-6">
+          <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+            <div className="p-2.5 rounded-xl bg-blue-50 text-blue-600">
+              <Building className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">
+                Official Contact Information
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Manage your company's public contact details.
+              </p>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
+
             <FormField
               id="contact-email"
               label="Public Inquiry Email"
@@ -153,13 +153,13 @@ export const Settings = () => {
               error={errors.contact?.email?.message}
             >
               <div className="relative">
-                <Mail className="w-4 h-4 text-brand-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   id="contact-email"
                   type="email"
                   placeholder="info@codeeagle.in"
-                  className={`input-field pl-10 ${
-                    errors.contact?.email ? 'border-red-500' : ''
+                  className={`w-full bg-white border rounded-xl py-3 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 outline-none transition focus:ring-2 focus:ring-blue-100 focus:border-blue-500 ${
+                    errors.contact?.email ? 'border-red-400' : 'border-slate-200'
                   }`}
                   {...register('contact.email')}
                 />
@@ -173,13 +173,13 @@ export const Settings = () => {
               error={errors.contact?.phone?.message}
             >
               <div className="relative">
-                <Phone className="w-4 h-4 text-brand-muted absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   id="contact-phone"
                   type="text"
                   placeholder="+91 731 456 7890"
-                  className={`input-field pl-10 ${
-                    errors.contact?.phone ? 'border-red-500' : ''
+                  className={`w-full bg-white border rounded-xl py-3 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 outline-none transition focus:ring-2 focus:ring-blue-100 focus:border-blue-500 ${
+                    errors.contact?.phone ? 'border-red-400' : 'border-slate-200'
                   }`}
                   {...register('contact.phone')}
                 />
@@ -195,13 +195,13 @@ export const Settings = () => {
                 helperText="Physical office address shown in website footer and contact page."
               >
                 <div className="relative">
-                  <MapPin className="w-4 h-4 text-brand-muted absolute left-3.5 top-3" />
+                  <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                   <textarea
                     id="contact-location"
-                    rows={2}
+                    rows={3}
                     placeholder="Crystal IT Park, Ring Road, Indore, MP 452001, India"
-                    className={`input-field pl-10 resize-none ${
-                      errors.contact?.officeLocation ? 'border-red-500' : ''
+                    className={`w-full bg-white border rounded-xl py-3 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 resize-none outline-none transition focus:ring-2 focus:ring-blue-100 focus:border-blue-500 ${
+                      errors.contact?.officeLocation ? 'border-red-400' : 'border-slate-200'
                     }`}
                     {...register('contact.officeLocation')}
                   />
@@ -209,108 +209,132 @@ export const Settings = () => {
               </FormField>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Section 2: Homepage Statistics */}
-        <div className="card-gradient border border-border-blue/70 p-5 sm:p-7 space-y-5">
-          <div className="flex items-center gap-2.5 pb-3 border-b border-border-blue/50">
-            <Award className="w-5 h-5 text-brand-cyan" />
+        {/* Homepage Statistics */}
+        <section className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-7 shadow-sm space-y-6">
+          <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
+            <div className="p-2.5 rounded-xl bg-sky-50 text-sky-600">
+              <Award className="w-5 h-5" />
+            </div>
             <div>
-              <h2 className="text-base font-semibold text-white">
+              <h2 className="text-base font-semibold text-slate-900">
                 Public Metrics & Milestones
               </h2>
-              <p className="text-xs text-brand-muted mt-0.5">
-                Key numerical achievements featured prominently on the landing page
+              <p className="text-xs text-slate-500 mt-1">
+                Update the achievements displayed on your website homepage.
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
             <FormField
-              id="stats-years"
-              label="Years in Business"
+              id="stats-hours"
+              label="Engineering Hours"
               required
-              error={errors.stats?.yearsExperience?.message}
+              error={errors.stats?.engineeringHours?.message}
             >
-              <input
-                id="stats-years"
-                type="number"
-                min="0"
-                className={`input-field font-semibold text-brand-cyan ${
-                  errors.stats?.yearsExperience ? 'border-red-500' : ''
-                }`}
-                {...register('stats.yearsExperience')}
-              />
+              <div className="relative">
+                <input
+                  id="stats-hours"
+                  type="number"
+                  min="0"
+                  placeholder="15000"
+                  className={`w-full bg-white border rounded-xl px-4 py-3 pr-8 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 ${
+                    errors.stats?.engineeringHours ? 'border-red-400' : 'border-slate-200'
+                  }`}
+                  {...register('stats.engineeringHours')}
+                />
+                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">
+                  +
+                </span>
+              </div>
             </FormField>
 
             <FormField
               id="stats-projects"
-              label="Projects Completed"
+              label="Projects Delivered"
               required
-              error={errors.stats?.projectsCompleted?.message}
-            >
-              <input
-                id="stats-projects"
-                type="number"
-                min="0"
-                className={`input-field font-semibold text-brand-cyan ${
-                  errors.stats?.projectsCompleted ? 'border-red-500' : ''
-                }`}
-                {...register('stats.projectsCompleted')}
-              />
-            </FormField>
-
-            <FormField
-              id="stats-clients"
-              label="Active Global Clients"
-              required
-              error={errors.stats?.activeClients?.message}
-            >
-              <input
-                id="stats-clients"
-                type="number"
-                min="0"
-                className={`input-field font-semibold text-brand-cyan ${
-                  errors.stats?.activeClients ? 'border-red-500' : ''
-                }`}
-                {...register('stats.activeClients')}
-              />
-            </FormField>
-
-            <FormField
-              id="stats-satisfaction"
-              label="Client Satisfaction (%)"
-              required
-              error={errors.stats?.clientSatisfaction?.message}
+              error={errors.stats?.projectsDelivered?.message}
             >
               <div className="relative">
                 <input
-                  id="stats-satisfaction"
+                  id="stats-projects"
+                  type="number"
+                  min="0"
+                  placeholder="32"
+                  className={`w-full bg-white border rounded-xl px-4 py-3 pr-8 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 ${
+                    errors.stats?.projectsDelivered ? 'border-red-400' : 'border-slate-200'
+                  }`}
+                  {...register('stats.projectsDelivered')}
+                />
+                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">
+                  +
+                </span>
+              </div>
+            </FormField>
+
+            <FormField
+              id="stats-partners"
+              label="Enterprise Partners"
+              required
+              error={errors.stats?.enterprisePartners?.message}
+            >
+              <div className="relative">
+                <input
+                  id="stats-partners"
+                  type="number"
+                  min="0"
+                  placeholder="50"
+                  className={`w-full bg-white border rounded-xl px-4 py-3 pr-8 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 ${
+                    errors.stats?.enterprisePartners ? 'border-red-400' : 'border-slate-200'
+                  }`}
+                  {...register('stats.enterprisePartners')}
+                />
+                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">
+                  +
+                </span>
+              </div>
+            </FormField>
+
+            <FormField
+              id="stats-retention"
+              label="Client Retention (%)"
+              required
+              error={errors.stats?.clientRetention?.message}
+            >
+              <div className="relative">
+                <input
+                  id="stats-retention"
                   type="number"
                   min="0"
                   max="100"
-                  className={`input-field font-semibold text-brand-cyan pr-8 ${
-                    errors.stats?.clientSatisfaction ? 'border-red-500' : ''
+                  placeholder="98"
+                  className={`w-full bg-white border rounded-xl px-4 py-3 pr-9 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 ${
+                    errors.stats?.clientRetention ? 'border-red-400' : 'border-slate-200'
                   }`}
-                  {...register('stats.clientSatisfaction')}
+                  {...register('stats.clientRetention')}
                 />
-                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-brand-muted">
+                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400">
                   %
                 </span>
               </div>
             </FormField>
           </div>
-        </div>
+        </section>
 
-        {/* Actions Bar */}
-        <div className="card-gradient border border-border-blue/60 p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-xs text-brand-muted text-center sm:text-left">
+        {/* Save and Reset Actions */}
+        <section className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-xs text-center sm:text-left">
             {isDirty ? (
-              <span className="text-amber-400 font-medium">
+              <span className="text-amber-700 font-medium">
                 Changes have been made. Remember to save your updates.
               </span>
             ) : (
-              <span>All settings are currently synchronized with the database.</span>
+              <span className="text-slate-500">
+                All settings are currently synchronized with the database.
+              </span>
             )}
           </div>
 
@@ -319,30 +343,29 @@ export const Settings = () => {
               type="button"
               disabled={!isDirty || saving}
               onClick={handleReset}
-              className="btn-secondary text-xs sm:text-sm py-2.5 px-4 flex items-center gap-2 disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 text-sm font-medium hover:bg-slate-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <RotateCcw className="w-4 h-4 text-brand-muted" />
-              <span>Reset</span>
+              <RotateCcw className="w-4 h-4" />
+              Reset
             </button>
 
             <button
               type="submit"
               disabled={!isDirty || saving}
-              className="btn-primary text-xs sm:text-sm py-2.5 px-6 flex items-center gap-2 disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 shadow-sm shadow-blue-200 transition disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {saving ? (
                 <Loader size="sm" text="" />
               ) : (
-                <Save className="w-4 h-4 text-brand-cyan" />
+                <Save className="w-4 h-4" />
               )}
-              <span>{saving ? 'Saving Changes...' : 'Save Changes'}</span>
+              {saving ? 'Saving Changes...' : 'Save Changes'}
             </button>
           </div>
-        </div>
+        </section>
       </form>
     </div>
   );
 };
 
 export default Settings;
-

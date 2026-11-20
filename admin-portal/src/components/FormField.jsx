@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 export const FormField = ({
@@ -14,11 +15,13 @@ export const FormField = ({
       {label && (
         <label
           htmlFor={id}
-          className="block text-xs sm:text-sm font-medium text-brand-text flex items-center justify-between"
+          className="block text-xs sm:text-sm font-medium text-slate-700"
         >
           <span>
             {label}
-            {required && <span className="text-red-400 ml-1 font-bold">*</span>}
+            {required && (
+              <span className="text-red-500 ml-1 font-bold">*</span>
+            )}
           </span>
         </label>
       )}
@@ -26,14 +29,14 @@ export const FormField = ({
       {children}
 
       {helperText && !error && (
-        <p className="text-xs text-brand-muted">{helperText}</p>
+        <p className="text-xs text-slate-500">{helperText}</p>
       )}
 
       {error && (
         <p
           id={`${id}-error`}
           role="alert"
-          className="text-xs font-medium text-red-400 flex items-center gap-1 animate-fadeIn"
+          className="text-xs font-medium text-red-600 flex items-center gap-1 animate-fadeIn"
         >
           <span>•</span>
           <span>{error}</span>
@@ -44,4 +47,3 @@ export const FormField = ({
 };
 
 export default FormField;
-

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Inbox } from 'lucide-react';
 
@@ -11,18 +12,29 @@ export const EmptyState = ({
 }) => {
   return (
     <div
-      className={`card-gradient p-8 sm:p-12 text-center flex flex-col items-center justify-center border border-border-blue/60 ${className}`}
+      className={`bg-white p-8 sm:p-12 text-center flex flex-col items-center justify-center border border-slate-200 rounded-2xl shadow-sm ${className}`}
     >
-      <div className="w-16 h-16 rounded-full bg-navy-900 border border-border-blue flex items-center justify-center text-brand-cyan mb-4 shadow-glow-sm">
+      {/* Icon */}
+      <div className="w-16 h-16 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 mb-4">
         <Icon className="w-8 h-8" />
       </div>
-      <h3 className="text-lg font-semibold text-white mb-1.5">{title}</h3>
-      <p className="text-sm text-brand-text/80 max-w-md mb-6">{description}</p>
+
+      {/* Title */}
+      <h3 className="text-lg font-semibold text-slate-900 mb-1.5">
+        {title}
+      </h3>
+
+      {/* Description */}
+      <p className="text-sm text-slate-500 max-w-md mb-6">
+        {description}
+      </p>
+
+      {/* Action Button */}
       {actionLabel && onAction && (
         <button
           type="button"
           onClick={onAction}
-          className="btn-primary text-sm focus-visible:ring-2 focus-visible:ring-brand-cyan"
+          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 outline-none"
         >
           {actionLabel}
         </button>
@@ -32,4 +44,3 @@ export const EmptyState = ({
 };
 
 export default EmptyState;
-
